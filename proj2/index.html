@@ -1,7 +1,377 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 2 here
-	</body>
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Alfred Quan and Ananth Rao</h2>
+
+  <br><br>
+
+      <div>
+
+          <h2 align="middle">Overview</h2>
+          <p>
+              In this project, we first explored how Bezier curves work and how they are implemented, as well as how Bezier curves apply to surfaces to help us build a teapot mesh. 
+              Next, we explored various meshes and operations done to them, which include area-weighted vertex normals, edge flipping and splitting, and applying edge flipping and splitting to do loop subdivisions.
+              We also explored how these various operations affect the various meshes in different ways, as well as if we pre-process the meshes in different ways. 
+          </p>
+
+          <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+          <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+
+          <p>
+              Explain de Casteljau's algorithm
+
+              In de Casteljau's algorithm, for every iteration, we split each edge into two segments of (t*length) and ((1-t)* length).
+              We then connect the dots that came from each edge, so for the next iteration, we have one less edge and one less vertex to worry about.
+              We continue this until we have a single vertex. The algorithm should correspond to a curve, known as the Bezier curve.
+          </p>
+
+          <p>
+              We implemented this going through every point, creating a new vector, and adding the ((1-t) * current point + (t * next point)) to the new vector.
+              This is for just one iteration of de Casteljau's algorithm; the function evaluateStep would have to run multiple times to reach the final point.
+          </p>
+
+          <p>
+              The following is a display using six points defined at (0.1, 0.75), (0.3, 0.9), (0.5, 0.2), (0.65, 0.7), (0.85, 0.55), (0.95, 0.4), for the top two images.
+              The bottom two images are a slightly modified version of the six points, as well as a different t value.
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="first-two-steps.png" align="middle" width="400px" />
+                          <figcaption align="middle">First two steps. </figcaption>
+                      </td>
+                      <td>
+                          <img src="all-steps.png" align="middle" width="400px" />
+                          <figcaption align="middle">All steps, including final point. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="diff-first-two-steps.png" align="middle" width="400px" />
+                          <figcaption align="middle">First two steps on modified points and t. </figcaption>
+                      </td>
+                      <td>
+                          <img src="diff-all-steps.png" align="middle" width="400px" />
+                          <figcaption align="middle">All steps on modified points and t. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+
+          <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+
+          <p>
+              de Casteljau's algorithm extends to surfaces. We can apply the algorithm to a 3-dimensional space.
+              We can use 4x4 control points, to represent a surface patch.
+              Using the control points, we can find the according surface point using de Casteljau, by first evaluating the points along the u, and then using the result of that to evaluate a final surface point (u,v).
+              We change up the t values for (u,v) in order to find the points on the surface.
+          </p>
+
+          <p>
+              In order to evaluate Bezier surfaces, we first made a 3-dimensional version for evaluateStep.
+              Next, we implemented another helper function, which involves calling de Casteljau's algorithm until the final iteration, with a single point.
+              Then, we iterated through the control points to get a list of points from the results of the final point, with respect to the u parameter as t.
+              Finally, with this list of points, we evaluate for a single point, with the v parameter being t. This point lies on the corresponding Bezier surface.
+          </p>
+
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="teapot-bez.png" align="middle" width="400px" />
+                          <figcaption align="middle">Screenshot of teapot. </figcaption>
+                      </td>
+                      <td>
+                          <img src="teapot-bez-diff-view.png" align="middle" width="400px" />
+                          <figcaption align="middle">Different view of teapot.  </figcaption>
+                      </td>
+                  </tr>
+
+              </table>
+          </div>
+
+          <h2 align="middle">Section II: Sampling</h2>
+
+          <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+
+          <p>
+
+              We implemented area-weighted vector normals by adding the area of every neighboring triangle.
+              In order to get the first triangle, we got the vertex's halfedge's face, which has a normal function to get the normal. We then used Heron's formula to get the area. We also kept track of the total area.
+              We got the next triangle by getting the halfedge's twin's next halfedge, and repeating the process until we return to the original vertex's halfedge.
+              Finally, we added the normals multipled by the areas corresponding to every triangle, divided by the sum of the areas.
+
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="teapot-flat.png" align="middle" width="400px" />
+                          <figcaption align="middle">Flat shading of teapot. </figcaption>
+                      </td>
+                      <td>
+                          <img src="teapot-flat-diff-view.png" align="middle" width="400px" />
+                          <figcaption align="middle">Different view for flat shading.  </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="teapot-phong.png" align="middle" width="400px" />
+                          <figcaption align="middle">Phong shading of teapot.  </figcaption>
+                      </td>
+                      <td>
+                          <img src="teapot-phong-diff-view.png" align="middle" width="400px" />
+                          <figcaption align="middle">Different view for Phong shading. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <h3 align="middle">Part 4: Half-edge flip</h3>
+
+          <p>
+              We implemented edge flip by first setting the neighbors of the halfedges corresponding to the edge to be flipped, and then switching around the pointers of the other halfedges.
+              We also changed the faces' halfedges to point to one of the two halfedges on the edge being flipped, as well as the vertices' halfedges to point to their new halfedge, as a result of the operation.
+              We meticulously drew the entire diagram on a notepad and followed it in our code, so we did not have an eventful debugging journey.
+              An implementation trick is to define all existing halfedges and vertices as variables. Also, diagraming the entire flip operation and writing everything on paper beforehand helped a lot.
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="teapot-flat.png" align="middle" width="400px" />
+                          <figcaption align="middle">Teapot before flips. </figcaption>
+                      </td>
+                      <td>
+                          <img src="teapot-flips.png" align="middle" width="400px" />
+                          <figcaption align="middle">Teapot after some flips.   </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <h3 align="middle">Part 5: Half-edge split</h3>
+
+          <p>
+              After defining the existing components as variables, we calculated the location of the new point M as the midpoint between the two vertices it was connected to.
+              We defined additional faces, edges, and half-edges accordingly, and set the neighbors of all half edges, both existing and new. We also assigned new half-edges to the current edges/vertices/faces.
+              We once again used a notepad and diagrammed everything to assist us. Finally, we deleted the old interior edges, halfedges, and faces.
+              We chose to define four new faces and delete the two old ones, as well as define four new edges and eight new half edges, and delete the old ones. I think this made the implementation more convenient.
+              One bug that we forgot about was deleting the faces; with this bug, only some edges had the split behaving normally, while attempting to split most edges would crash the program.
+              However, because our diagramming was good, we did not run into any other bugs.
+
+
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="icosahedron.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original icosahedron. </figcaption>
+                      </td>
+                      <td>
+                          <img src="icosahedron-flips.png" align="middle" width="400px" />
+                          <figcaption align="middle">After some edge flips. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="icosahedron-splits.png" align="middle" width="400px" />
+                          <figcaption align="middle">After some edge splits. </figcaption>
+                      </td>
+                      <td>
+                          <img src="icosahedron-splits-flips.png" align="middle" width="400px" />
+                          <figcaption align="middle">After edge splits and edge flips. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+          <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+
+
+          <p>
+              We implemented loop division by first calculating the new positions of the existing vertices.
+              Next, we go through the current existing edges, calculate the position of the to-be vertex after the edge gets split, and then split all the edges.
+              We then flip the edges that came about as a result of the split and have one old vertex and one new vertex. Finally, we move all vertices into their new positions.
+              Once again, good diagramming goes a long way. We did add an extra parameter in the EdgeIter class to keep track of if the edge is a "flip" edge,
+              because not all new edges are necessarily ones that are candidates for flipping, in our implementation.
+              We instead used isNew to keep track of whether we already split it. We had trouble debugging this section of the implementation, because our program would crash as a result of infinite looping.
+          </p>
+
+          <p>
+              Here's an example with a torus:
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="torus-1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original torus. </figcaption>
+                      </td>
+                      <td>
+                          <img src="torus-2.png" align="middle" width="400px" />
+                          <figcaption align="middle">After first subdivision. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="torus-3.png" align="middle" width="400px" />
+                          <figcaption align="middle">After second subdivision. </figcaption>
+                      </td>
+                      <td>
+                          <img src="torus-4.png" align="middle" width="400px" />
+                          <figcaption align="middle">After third subdivision. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              After loop subdivision, the meshes become more round in general. Sharp corners and edges become a lot less sharp and more round, and become harder to distinguish from each other.
+              In order to reduce this effect, we can split along the edges in order to help us preserve much more of the original shape as possible. This helps preserve the detail along the edges
+              Here, we show what happens when we do initial splits along the edges of the cube verses when we do not do initial splits along the edges of the cube.
+              We illustrate on the cube because the effects are best shown on this mesh.
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="cube-1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original cube. </figcaption>
+                      </td>
+                      <td>
+                          <img src="cube-2.png" align="middle" width="400px" />
+                          <figcaption align="middle">After first subdivision. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="cube-3.png" align="middle" width="400px" />
+                          <figcaption align="middle">After second subdivision. </figcaption>
+                      </td>
+                      <td>
+                          <img src="cube-4.png" align="middle" width="400px" />
+                          <figcaption align="middle">After third subdivision. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+          <p>
+              Even though the cube, after a series of subdivisions, does look more messy, it does a better job at preserving the shape of the cube. The edges are a lot more clearly seen in this instance, after the subdivisions.
+          </p>
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="split-cube-1.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original cube with splits. </figcaption>
+                      </td>
+                      <td>
+                          <img src="split-cube-2.png" align="middle" width="400px" />
+                          <figcaption align="middle">After first subdivision. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="split-cube-3.png" align="middle" width="400px" />
+                          <figcaption align="middle">After second subdivision. </figcaption>
+                      </td>
+                      <td>
+                          <img src="split-cube-4.png" align="middle" width="400px" />
+                          <figcaption align="middle">After third subdivision. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              We can also split in the following way, such that the eight vertices of the cube look like they got split into similar ways as the cube initially was.
+              While the edges of this cube are still quite rounded, it is definitely an improvement over the original, and also moreso preserves the shape of the cube compared to merely splitting the edges. 
+          </p>
+
+          <div align="middle">
+              <table style="width=100%">
+                  <tr>
+                      <td>
+                          <img src="split-cube-5.png" align="middle" width="400px" />
+                          <figcaption align="middle">Original cube with another splitting method. </figcaption>
+                      </td>
+                      <td>
+                          <img src="split-cube-6.png" align="middle" width="400px" />
+                          <figcaption align="middle">After first subdivision. </figcaption>
+                      </td>
+                  </tr>
+
+                  <tr>
+                      <td>
+                          <img src="split-cube-7.png" align="middle" width="400px" />
+                          <figcaption align="middle">After second subdivision. </figcaption>
+                      </td>
+                      <td>
+                          <img src="split-cube-8.png" align="middle" width="400px" />
+                          <figcaption align="middle">After third subdivision. </figcaption>
+                      </td>
+                  </tr>
+              </table>
+          </div>
+
+          <p>
+              Such an operation also helps make the cube divide more symmetrically because we introduce extra edges that make the cube divisions more symmetrical in general.
+              One reason for this is that we now have edges coming from both diagonals of the squares that make up the cube, as opposed to just one.
+              Furthermore, we now have edges coming from the top to the bottom of the squares, as well as the left and right, in a way splitting the squares into four smaller squares.
+              This helps make the cube splitting a lot more symmetrical. 
+          </p>
+
+          <h2 align="middle">Section III: Optional Extra Credit</h2>
+          <p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+
+          <h3 align="middle">Part 7: Design your own mesh!</h3>
+
+      </div></body>
+
 </html>
