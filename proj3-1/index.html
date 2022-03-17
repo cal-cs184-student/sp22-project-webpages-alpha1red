@@ -1,7 +1,390 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
-</html>
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Alfred Quan and Ananth Rao  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Alfred Quan and Ananth Rao</h2>
+
+    <div class="padded">
+        <p>
+            In this project, we explored various illumination techniques. First, we looked at rays from a camera perspective, including generating them and checking for intersections.
+            Next, we sped up the rendering by changing the traversal method from searching through the whole thing to one similar to a binary tree.
+            We then explored direct and indirect illumination, and finally looked at sampling.
+        </p>
+
+        <h2 align="middle">Part 1: Ray Generation and Intersection</h2>
+        <p>
+            First, we generate a ray from the camera perspective, that passes through a point (x, y).
+            The ray's position startes from the camera, and is given by pos, typically at the origin.
+            The ray's direction is given by (tan(hFov * 𝛑 / 360)* (x * 2 - 1), tan(vFov * 𝛑 / 360) * (y * 2 - 1), -1),
+            where hFov and vFov define the sensor.
+            We then normalize the direction and return the vector.
+        </p>
+
+
+        <p>
+            When implementing primitive intersections for triangles, We used the Moller-Trumbore algorithm, which is faster than in Project 1.
+            We first defined five vectors: E1, E2, S, S1, and S2,
+            where E1 = p2 - p1, E2 = p3 - p2, S = r.o - p1, S1 = r.d x E2, and S2 = S x E1,
+            where p1, p2, p3 are the sides of the triangle, r.o is the origin of the ray, and r.d is the direction of the ray.
+            We get the time of the intersection, by (1/(S1 ⋅ E1))(S2 ⋅ E2).
+            We set vectors b1, b2, b3 by setting b2 = (1/(S1 ⋅ E1))(S1 ⋅ S), b3 = (1/(S1 ⋅ E1))(s1 ⋅ r.d), and b1 = 1 - b2 - b3, used to calculate the normal.
+            We check if b1, b2, b3 are all greater than 0, as well as if t is in bounds, and if so, we change the intersection accordingly;
+            we set the normal to n1 * b1 + n2 * b2 + n3 * b3, where n1, n2, n3 are the normals of the triangle. We also set the t_max to t.
+        </p>
+
+        <p>
+            Next, we implemented primitive intersection for spheres. First, we defined a = r.d ⋅ r.d, b = 2(r.o - C) ⋅ d, c = (r.o - C, r.o - C) - R^2,
+            where r.d is the ray's direction, r.o is the ray's origin, C is the sphere center. This is so we can solve a quadratic equation to get t, because
+            the initial formula to solve for the intersection is (r.o + t(r.d) - c)^2 - R^2 = 0, so we can solve for t if we expand and turn into the form at^2 + bt + c = 0.
+            Depending on the possible values of t, there could be 0, 1, or 2 intersection points. We check to make sure there's at least one,
+            and then set t to the closer of the two possible solutions, or the only possible solution, if there's only one.
+            We update intersection accordingly, and update the ray's max_t to be equal to t.
+        </p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="CBspheresTask4Part1-CorrectlyColoredSPhere.png" align="middle" width="400px" />
+                        <figcaption align="middle">CBSpheres Mesh </figcaption>
+                    </td>
+                    <td>
+                        <img src="banana.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Banana Mesh </figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="building.png" align="middle" width="400px" />
+                        <figcaption align="middle">Building Mesh </figcaption>
+                    </td>
+                    <td>
+                        <img src="CBGems.png" align="middle" width="400px" />
+                        <figcaption align="middle">CBGems mesh</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 align="middle">Part 2: Intersecting the Bounding Box</h2>
+        <p>
+            We constructed the bvh by splitting the vector approximately halfway each time, like to a binary tree.
+            Unless the vector passed in could fit within the maximum leaf size, we would split it into two parts by using partition.
+            In order to calculate the split point, we took the average of all the centroids, and then split across the axis with the highest centroid extent.
+            For example, if the x axis has the highest centroid extent, we would split along that, with the split plane being across the average x of the centroids.
+            In order to calculate the intersections of the ray to the bounding box, we traversed through the tree, updating the minimum length intersections across the ray along the way.
+        </p>
+
+        <p>
+            We also experimented with another aplitting point method, which is taking the midpoint between the centroid min and max, by doing the average on the two.
+            We did not find many significant differences in terms of speed. The plane at which the mesh split was different, as sometimes,
+            the triangles would be more concentrated, which the above split point algorithm takes into account, but this one does not.
+        </p>
+
+        <p>
+            The BVH considerably sped up the rendering of meshes, including making some meshes that would normally take a few minutes render in less than three seconds,
+            such as CBLucy and dragon. Meshes like cow used to take around 40 seconds, but after BVH acceleration, take less than a second.
+            Traversing through a binary tree is O(log n) time, whereas traversing through a list is O(n) time, so this would make sense.
+            Furthermore, it is easier to get rid of more nodes at a time in a binary tree - when the ray does not intersect the bounding box at a node, for example, we can skip the entire node.
+        </p>
+
+
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="cow.png" align="middle" width="400px" />
+                        <figcaption align="middle">Cow mesh, sped up to less than a second </figcaption>
+                    </td>
+                    <td>
+                        <img src="maxplanck.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Max Planck mesh </figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="CBLucy.png" align="middle" width="400px" />
+                        <figcaption align="middle">CBLucy mesh </figcaption>
+                    </td>
+                    <td>
+                        <img src="dragonP1.png" align="middle" width="400px" />
+                        <figcaption align="middle">Dragon mesh</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 align="middle">Part 3: Direct Illumination</h2>
+
+        <p>
+            Direct Lighting Hemisphere: Sample uniformly over directions in the unit hemisphere with origin of hitpoint and center radius the normal at the hitpoint.
+            For rays in such directions that intersect light sources, add the emitted light times an appropriate reflection factor,
+            and multiply by the cosine of the angle between the normal and the outgoing ray we cast out from the hitpoint (use the dot product to get this).
+            We then divide by the number of rays we cast out to get an estimate of the lighted color at the hitpoint.
+        </p>
+        <p>
+            Direct Lighting Importance: Iterate over all lights in the volume. For point lights, do only one iteration; for others, do ns_area_lights.
+            For each such inner iteration, sample a random point on the light, and see whether the ray from the hitpoint to that point is unobstructed
+            (in particular, check if bvh->intersect call with ray in directions from hitpoint to point on light with max distance corresponding to time for the ray to travel distToLight - EPS_F is false).
+            If it is, then add the emitted light times an appropriate reflection factor, and multiply by the cosine of the angle between the normal and the outgoing ray we cast out from the hitpoint (use the dot product to get this).
+            We then divide by the number of points we sampled on the light we cast out to get an estimate of the lighted color at the hitpoint.
+        </p>
+
+        <p> Bunny and sphere meshes comparing the two forms of lighting. </p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="CBBunny_H_64_32.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Hemisphere </figcaption>
+                    </td>
+                    <td>
+                        <img src="Bunny_64_32.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Importance </figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="CBSpheres_H_64_32.png" align="middle" width="400px" />
+                        <figcaption align="middle">Spheres mesh, Hemisphere </figcaption>
+                    </td>
+                    <td>
+                        <img src="spheres_64_32.png" align="middle" width="400px" />
+                        <figcaption align="middle">Spheres mesh, Importance</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>
+            All these images were taking using the same settings, aside from the image itself and if it's hemisphere or importance.
+            Between the two forms of lighting, hemisphere lighting generally produces more grainy images, especially with regards to the background.
+            The shadows also look slightly more defined in importance lighting. The light is also more defined in importance lighting,
+            seemingly not spreading out as much as in hemisphere lighting.
+        </p>
+
+
+        <p> Bunny mesh using 1, 4, 16, 64 Light Rays and Sample Rate 1, Importance </p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="bunny_1_1.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 1 Light Ray </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_1_4.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 4 Light Rays</figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="bunny_1_16.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 16 Light Rays </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_1_64.png" align="middle" width="400px" />
+                        <figcaption align="middle">Spheres mesh, 64 Light Rays</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>
+            Overall, as we use more light rays, the shadow to the left of the bunny, especially, becomes more defined,
+            and the grains that come out of it become a lot more reduced. The effect seems to have a reduced effect after 16 light rays,
+            perhaps because the shadow is already quite defined, but there are still differences.
+            The bunny's right especially, as well as its head/body, also loses the black dots/grains as the number of light rays increase.
+            Overall, the noise level decreases as we use more light rays.
+        </p>
+
+        <h2 align="middle">Part 4: Global Illumination</h2>
+
+        <p>
+            We implemented global illumination by first doing one_bounce_radiance to a given ray.
+            Next, if the ray still has depth greater than zero, we randomly choose to recurse with probability 0.65,
+            and if so, we decrease the depth for the next recursion, and add the results of the recursion to the result.
+            In order to calculate the indirect illumination, we take the results of the recursive call, multiply it by the result of sample_f of the hit point, and divide it by the pdf * 0.65.
+
+        </p>
+
+        <p> Dragon and Bench with Global Illumination</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="dragon.png" align="middle" width="400px" />
+                        <figcaption align="middle">Dragon mesh </figcaption>
+                    </td>
+                    <td>
+                        <img src="bench.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Bench mesh</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p> Bunny with only direct, and only indirect illumination</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="CBBunny_direct.png" align="middle" width="400px" />
+                        <figcaption align="middle">Only Direct Illumination</figcaption>
+                    </td>
+                    <td>
+                        <img src="CBBunny_indirect.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Only Indirect Illumination</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p> Bunny with max ray depth 0, 1, 2, 3, and 100</p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="bunny_0_ray.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Max Ray Depth 0 </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_1_ray.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Max Ray Depth 1</figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="bunny_2_ray.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Max Ray Depth 2 </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_3_ray.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Max Ray Depth 3</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="bunny_100_ray.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, Max Ray Depth 100 </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>
+            As the maximum ray depth increases, the image becomes more and more bright overall, but not all that much.
+            The difference between ray depth 3 and 100 is the least significant, given most rays probably do not reach greater than max depth 3, due to Russian roulette.
+        </p>
+
+        <p> Bunny with sample-per-pixel rates 1, 2, 4, 8, 16, 64, 1024 </p>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="bunny_1_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 1 Sample per Pixel</figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_2_sample.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 2 Samples per Pixel</figcaption>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <img src="bunny_4_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 4 Samples per Pixel </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_8_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 8 Samples per Pixel </figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="bunny_16_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 16 Samples per Pixel </figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_64_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 64 Samples per Pixel </figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <img src="bunny_1024_sample.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh, 1024 Samples per Pixel </figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>
+            With lower sample per pixel rates, we see a lot more white specks all over the image.
+            As the sample rate increases, this noise becomes more and more reduced.
+        </p>
+
+
+
+        <h2 align="middle">Part 5: Adaptive Sampling</h2>
+
+        <p>
+            To implement adaptive sampling, for every samplesPerBatch samples,
+            we compute I and mu from appropriate computation based on the illum() of each call to est_radiance_global_illumination.
+            We continue until I < maxTolerance * mu or we have gone through num_samples iterations.
+            We then update sampleCountBuffer to include the number of times we sampled.
+        </p>
+
+        <p>
+            Bunny mesh and its relevant adaptive sampling
+        </p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td>
+                        <img src="bunny.png" align="middle" width="400px" />
+                        <figcaption align="middle">Bunny mesh</figcaption>
+                    </td>
+                    <td>
+                        <img src="bunny_rate.png" alimgn="middle" width="400px" />
+                        <figcaption align="middle">Relevant adaptive sampling</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>
+            Places like the shadow and the bottom of the bunny were sampled a lot more, as was the ceiling. 
+            As the shadow goes out, the sampling rate gradually decreases. 
+        </p>
+
+
+
+
+
+
+    </div>
