@@ -1,7 +1,188 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Your Name  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer</h1>
+    <h2 align="middle">Alfred Quan and Ananth Rao</h2>
+
+    <div class="padded">
+        <p>
+            In this assignment, we looked at how mirror and glass materials can 
+        </p>
+
+
+        <o>
+
+            <h2 align="middle">Part 1: Mirror and Glass Materials</h2>
+            <p>
+                When the ray depth is zero, we do not see anything in the room aside from the light.
+                We only care about the direct emission from the light in this instance.
+            </p>
+            <p>
+                The ray depth being one leads to both spheres being dark, but you can see the walls and floor.
+                The ceiling, aside from the light, is fully dark. Here, we only look at one ray from the light,
+                so this makes sense. We don't take into account the spheres reflecting light.
+            </p>
+            <p>
+                When the ray depth is two, one sphere starts to reflect, while the other is mostly dark.
+                The sphere on the right is only refractive, so it cannot refract yet, 
+                since that takes a ray depth of three. We also see that the mini sphere and ceiling on the left
+                sphere is dark. This is again because the ray depth is two. 
+            </p>
+
+            <p>
+                When the ray depth is three, the sphere on the right starts to refract. 
+                The ceiling on the sphere on the left is no longer dark, but the sphere within the sphere is still 
+                dark. We also start to see a glass shadow from the right sphere. 
+                This is a result of the right sphere starting to refract. 
+            </p>
+
+            <p>
+                When the ray depth is four, the mini sphere on the sphere on the right starts to show color,
+                and we see a bit of light on the blue wall to the right of the right sphere. 
+                This is due to one extra depth allowing some light rays to bounce onto the wall, as well as 
+                onto the mini-sphere inside the left sphere. 
+            </p>
+            
+            <p>
+                The images with max ray depth 5 and 100 do not change all that much, only being slightly
+                brighter and brighter. We are taking into account more ray reflections, so this is natural. 
+            </p>
+
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="ray0.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 0</figcaption>
+                        </td>
+                        <td>
+                            <img src="ray1.png" alimgn="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 1</figcaption>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <img src="ray2.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 2</figcaption>
+                        </td>
+                        <td>
+                            <img src="ray3.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 3</figcaption>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <img src="ray4.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 4</figcaption>
+                        </td>
+                        <td>
+                            <img src="ray5.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 5</figcaption>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <img src="ray100.png" align="middle" width="400px" />
+                            <figcaption align="middle">Max Ray Depth 100</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <h2 align="middle">Part 2: Microfacet Material</h2>
+
+            <p>
+                Below is the images of the dragon with different alpha values. As alpha increases,
+                the dragon's color retains its metallic gold color more and reflects less from the walls.
+
+            </p>
+
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="dragon_005.png" align="middle" width="400px" />
+                            <figcaption align="middle">Dragon with alpha 0.005</figcaption>
+                        </td>
+                        <td>
+                            <img src="dragon_05.png" alimgn="middle" width="400px" />
+                            <figcaption align="middle">Dragon with alpha 0.05</figcaption>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <img src="dragon_25.png" align="middle" width="400px" />
+                            <figcaption align="middle">Dragon with alpha 0.25</figcaption>
+                        </td>
+                        <td>
+                            <img src="dragon_5.png" align="middle" width="400px" />
+                            <figcaption align="middle">Dragon with alpha 0.5</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>
+                Below is the cosine hemisphere sampling and the importance sampling renderings of the bunny.
+                The bunny with cosine sampling has more black spots on the bunny, especially near the edges.
+                The importance sampling bunny looks more smooth and reflects the metal more.
+
+                This bunny was rendered using eta and k values corresponding to copper material.
+            </p>
+
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="bunny_cosine.png" align="middle" width="400px" />
+                            <figcaption align="middle">Bunny with cosine sampling</figcaption>
+                        </td>
+                        <td>
+                            <img src="bunny_importance.png" alimgn="middle" width="400px" />
+                            <figcaption align="middle">Bunny with importance sampling</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <p>Next, the eta and k values were changed to correspond to platinum. Here's the picture of the bunny now. </p>
+
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td>
+                            <img src="bunny_platinum.png" align="middle" width="400px" />
+                            <figcaption align="middle">Platinum bunny</figcaption>
+                        </td>
+                    </tr>
+
+                </table>
+            </div>
+
+
+
+        </o>
+    </div>
+</body>
 </html>
+
+
+
+
